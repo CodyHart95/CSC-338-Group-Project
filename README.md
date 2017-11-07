@@ -1,7 +1,13 @@
 # CSC-338-Group-Project
-<h2>CSC-338 - Parallel and Distributed group project. </h2>
+## Description </h2>
+The group project for CSC 338 - Parallel and Distributed Processing.
 
-<h2>Concept</h2>
+Our group is group <I don't remember our number, will fill in later>.
+
+
+> DUE DATE: Finals day in December (will actually look up date later)
+
+## Concept
 The basic idea of this project is to create a client-server interaction where the client
 sends a file to the server, the server then processes a SHA256 checksum for the file.
 The server then checks local databases (at the moment, most likely a dictionary that is
@@ -21,10 +27,8 @@ The result should be that file 2 (the 10KB file) will have its results returned 
 simply because of I/O constraints over sockets.
 
 
-<h2> Dependencies </h2>
+## Dependencies 
 As of now, the scripts require:
-<ul>
-  <li>Python 3.5 (specifically, for socket.sendfile()) or above</li>
-  <li>Sockets, hashlib, tkinter, etc. (Most of these things are automatically packaged with the base Python installer) </li>
-</ul>
+- Python 3.5 (specifically, for socket.sendfile()) or above</li>
+- Sockets, hashlib, tkinter, etc. (Most of these things are automatically packaged with the base Python installer) </li>
   
