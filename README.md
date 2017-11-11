@@ -2,10 +2,10 @@
 ## Description </h2>
 The group project for CSC 338 - Parallel and Distributed Processing.
 
-Our group is group <I don't remember our number, will fill in later>.
+Our group is **group 6**.
 
 
-> DUE DATE: DUE DATE: Finals day on December 14 at 11:00 AM - 1:00 PM.
+> DUE DATE: DUE DATE: Finals day on **December 14 at 11:00 AM - 1:00 PM**.
 I will also ask that one of us (or some of us) work on a presentation for the project.
 It can be in whatever format (powerpoint, Google slides, whatever) as long as we have access to it so we can be prepared.
 
