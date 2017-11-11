@@ -1,91 +1,133 @@
 import socket
 from os import getcwd
-from os.path import getsize
+from os.path import getsize, basename
 from time import sleep
 from hashlib import sha256
+from tkinter import Tk, filedialog
+import sys
 
 class Client(object):
-    number = 0
+
     def __init__(self, host, port, threads = 0):
         self.host = host
         self.port = port
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.num = Client.number
-        print("Connecting...")
-        try:
-            self.sock.connect((self.host, self.port))
-            print(self.sock.recv(512).decode())
-        except Exception as e:
-            print(e)
-            
         self.threads = threads
-        Client.number += 1
-        
+        print("Connecting...")
+        timeout = 0
+        while True:
+            try:
+                self.sock.connect((self.host, self.port))
+                self.recieve()
+                break
+            except:
+                if timeout > 20:
+                    self.disconnect(2)
+
+                print("Server cannot be reached at this time")
+                timeout += 1
+                sleep(2)
+
+        del timeout
+        self.sendCommand()
+
+    def sendCommand(self):
+        while True:
+            command = input("\nPlease enter a command: ")
+            print()
+            self.sock.sendall(command.lower().encode())
+            if command == "help":
+                self.recieve()
+            elif command == "checksum":
+                self.sendFiles()
+            elif command == "upload":
+                self.uploadFile()
+            elif command == "exit":
+                self.disconnect(0)
+            else:
+                self.recieve()
+
+
     def sendCount(self):
         """
-        The purpose of this function is to send the count of threads to the 
+        The purpose of this function is to send the count of threads to the
         main server, allowing the server to create listening threads so that
         the client can begin uploading multiple files over the socket.
         """
         try:
-            self.threads = input("How many files you sendin', boi or grill,"
-                                 " I support all people: ")
             print()
             self.sock.send(self.threads.encode())
-            print(self.sock.recv(1024).decode())
+            print(self.recieve())
         except Exception as e:
             print("Ran into an issue")
             print(e)
-            self.close()
-    
+            self.disconnect(3)
+
     def sendFiles(self):
-        print("Before")
-        directory = getcwd()
-        filename = directory + "/Favicon/icon.jpg"
+        window = Tk()
+        window.withdraw()
+        filename = filedialog.askopenfilename(initialdir = getcwd(), title = "select file")
+        window.destroy()
         hashed = self.getHash(filename)
         size = getsize(filename)
-        print(size)
         with open(filename, "rb") as file:
-            print("About to send...")
             self.sock.send(str(size).encode())
             print("Sent size")
             sleep(2)
-            self.sock.send(file.name.encode())
+            self.sock.send(basename(filename).encode())
             print("Sent file name")
-            sleep(2)
             print("Sending file...")
+            sleep(6)
             self.sock.sendfile(file)
             print("File sent")
-        
-        serverHashed = self.sock.recv(1024).decode()
-        print("Server hash recieved.")
+
         print(hashed)
-        print(serverHashed)
-        print(hashed == serverHashed)
-        file.close()
-            
-        
+        self.recieve(1024)
+
+
     def getHash(self, filename):
         file = open(filename, "rb")
         hashed = sha256(file.read()).hexdigest()
         file.close()
-        
+
         return hashed
-    
-    def sendNum(self):
-        self.sock.sendall("Greetings from socket {}".format(self.num).encode())
-    
-    def recieve(self):
-        print(self.sock.recv(512).decode())
-        
-    def close(self):
-        print("Disconnecting...")
-        self.sock.close()
+
+
+    def uploadFile(self):
+        window = Tk()
+        window.withdraw()
+        filename = filedialog.askopenfilename(initialdir = getcwd(), title = "select file")
+        window.destroy()
+        size = getsize(filename)
+        with open(filename, "rb") as file:
+            self.sock.send(str(size).encode())
+            print("Sent size")
+            sleep(2)
+            self.sock.send(basename(filename).encode())
+            print("Sent file name")
+            print("Sending file...")
+            sleep(6)
+            self.sock.sendfile(file)
+            print("File sent")
+
+        self.recieve(1024)
+
+
+    def recieve(self, size = 512):
+        print(self.sock.recv(size).decode())
+
+    def disconnect(self, code):
+        if code == 2:
+            print("Connection time out!")
+            self.sock.close()
+            sys.exit(code)
+        elif code == 3:
+            print("Program error...")
+            sys.exit(code)
+        else:
+            print("Disconnecting...")
+            self.sock.close()
+            sys.exit(code)
 
 if __name__ == "__main__":
-    sock = Client("localhost", 9999)
-    sock.sendFiles()
-    
-    
-#    for i in range(50):
-#        socks.append(Client("localhost", 9999))
+    Client("localhost", 9999)
