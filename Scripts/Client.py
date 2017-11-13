@@ -58,13 +58,16 @@ class Client(object):
 
         while True:
 
+            print(50 * "-")
+
             # Get commands from the client.
-            command = input("\nPlease enter a command: ")
+            command = input("\nPlease enter a command: ").lower()
             print()
 
+            print(50 * "-")
             # Ensures that the command is sent with some convention (all lower
             # case letters).
-            self.sock.sendall(command.lower().encode())
+            self.sock.sendall(command.encode())
             if command == "help":
                 self.recieve()
             elif command == "checksum":
@@ -108,7 +111,8 @@ class Client(object):
         window.withdraw()
 
         # Create a select file window to get the path to a file with.
-        filename = filedialog.askopenfilename(initialdir = getcwd(), title = "select file")
+        filename = filedialog.askopenfilename(initialdir = getcwd(),
+                                              title = "select file")
 
         # Destroy the tkinter window that we just created.
         window.destroy()
@@ -125,7 +129,7 @@ class Client(object):
 
             # Print to the client the file name of the file that we are sending
             # to the server to be checjed.
-            print("Sending file:\"{}\"".format(basename(filename)))
+            print("Sending file: \"{}\"".format(basename(filename)))
 
             # Send the size of the file to the server.
             self.sock.send(str(size).encode())

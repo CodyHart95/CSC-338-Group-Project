@@ -73,7 +73,7 @@ class Server(object):
             # client a welcome message.
             print("IP address {} connected".format(address[0]))
             client.sendall("\nWelcome! You've connected to CSC 338's checksum "
-                           "server! Enjoy! send \"help\" for commands".encode())
+                           "server! Enjoy! Send \"help\" for commands".encode())
 
             # Once we have sent the message to the client, we will append the
             # client to our client list then begin listening to the client for
@@ -175,14 +175,15 @@ help (or \"h\") - show a list of commands
         # information to the client along with the checksum so that the client
         # can check if the file was sent succesfully.
         if sha256Hash in self.collection:
-            client.sendall("Your file was found in our database! Other names"
-                           " for this file are {}. Your checksum is {}."
+            client.sendall("Your file was found in our database!\nOther names"
+                           " for this file are: {}.\nYour checksum is {}."
                            .format(", ".join(self.collection[sha256Hash]),
                            sha256Hash).encode())
         else:
             client.sendall("Your file was not found in our database! :( Please"
-                            " upload this file so that others can check it! :)"
-                            " Your checksum is {}".format(sha256Hash).encode())
+                            " upload this file so that others can check against"
+                            " it!\nYour checksum is {}".format(sha256Hash)
+                            .encode())
 
         sleep(2)
 
