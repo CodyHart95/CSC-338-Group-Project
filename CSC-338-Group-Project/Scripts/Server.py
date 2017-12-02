@@ -4,8 +4,8 @@ import sys
 from time import sleep
 
 """
-TODO: Implement threading of files/listeners. Might include some research.
-TODO: Possibly implement multiprocessing. Will also include research.
+TODO: Clean up code and remove unnecessary functions
+
 """
 
 
@@ -45,7 +45,7 @@ class Server(object):
         # This will be the dictionary key-value pair that will hold the checksum
         # as the key and the value as a set of file names that have the same
         # binary checksum.
-        self.collection = {}
+        self.collection = {"f5333a754ddfd949823c167dd96a95a30ae5aeff3bb339b1a666ac9caa80d4f1": "clean"}
 
         # This sets our server to begin listening for new connections
         self.listen()
@@ -89,7 +89,9 @@ class Server(object):
         # notification saying that the command is not recognized and ask the
         # client to send "help" in order to see our list of commands.
         while True:
-            command = client.recv(512).decode()
+            # This must have a recieve size of 8 otherwise the server begins to grab
+            # the hash of the next file
+            command = client.recv(8).decode()
             if command == "upload":
 
                 # If the client sends "upload," begin the saveFile function.
@@ -134,9 +136,10 @@ help (or \"h\") - show a list of commands
 
         # This function accepts the size of the file, the name of the file,
         # and then checks the file against its database.
-
+       
         # Recieve the size of the file.
-        size = client.recv(512).decode()
+        sha256Hash = client.recv(512).decode()
+       
 
         # Since the server is currently run and tested internally on the same
         # system, most of the transfer times are instance, which affects the
@@ -144,19 +147,7 @@ help (or \"h\") - show a list of commands
         # need to sleep after every recieve and every send to ensure that the
         # programs on both sides have the time to process and recieve the info
         # before we continue communication or taint the connection buffer.
-        sleep(2)
-
-        # Collect the file name of the file being sent.
-        filename = client.recv(512).decode()
-
-        # Sleep for the integrity of our file transfer.
-        sleep(8)
-
-        # Initiate a block size to grab. Set to 4 kilobytes.
-        blocksize = 4096
-
-        # Initiate a file variable that is a set of strings in byte encoding.
-        file = b''
+        #sleep(2)
 
         # This loop will collect the size of the file. Since we are incapable of
         # purely knowing the size of each file, we will do integer division.
@@ -165,11 +156,6 @@ help (or \"h\") - show a list of commands
         # amount of times to gather the blocksize, which results in
         # size * blocksize. Since size can still be > blocksize, we must ensure
         # that we get the remainder of the file. That is the + 1.
-        for i in range((int(size) // blocksize) + 1):
-            file += client.recv(blocksize)
-
-        # Creates our SHA256 hash.
-        sha256Hash = sha256(file).hexdigest()
 
         # Checks if the hash is in our database and returns the appropriate
         # information to the client along with the checksum so that the client
@@ -187,35 +173,6 @@ help (or \"h\") - show a list of commands
 
         sleep(2)
 
-    def saveFile(self, client):
-
-        # This is very similar to the checkSum function but instead of returning
-        # if the file is on the server, it instead saves the file checksum and
-        # filename on the server. Follows the same logic except slightly
-        # different implementation.
-
-        size = client.recv(512).decode()
-        sleep(2)
-        filename = client.recv(512).decode()
-        sleep(8)
-        blocksize = 4096
-        file = b''
-        for i in range((int(size) // blocksize) + 1):
-            file += client.recv(blocksize)
-
-        sha256Hash = sha256(file).hexdigest()
-        client.sendall("Upload complete!".encode())
-
-        # If the hash is not in our "database," we add it to the dictionary
-        # along with the file name. Using a set allows the prevention of
-        # multiple file names being added to the collection.
-        if sha256Hash not in self.collection:
-            self.collection[sha256Hash] = set()
-            self.collection[sha256Hash].add(filename)
-        else:
-            self.collection[sha256Hash].add(filename)
-
-        sleep(2)
 
     def removeClient(self, client, address):
 

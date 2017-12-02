@@ -5,12 +5,13 @@ from time import sleep
 from hashlib import sha256
 from tkinter import Tk, filedialog
 import sys
+import threading 
+
 
 class Client(object):
 
     # The client counterpart to the checksum. Includes the interactions for
     # the client and the server.
-
     def __init__(self, host, port, threads = 0):
 
         # Currently, the client is initialized with a host to connect to
@@ -51,7 +52,7 @@ class Client(object):
 
         # sendCommand will ask the user for input to send to the server.
         self.sendCommand()
-
+        
     def sendCommand(self):
 
         # Infinite loop to ask for user interactions.
@@ -67,13 +68,15 @@ class Client(object):
             print(50 * "-")
             # Ensures that the command is sent with some convention (all lower
             # case letters).
-            self.sock.sendall(command.encode())
+            
             if command == "help":
+                self.sock.sendall(command.encode())
                 self.recieve()
             elif command == "checksum":
-                self.sendFiles()
+                self.sendFiles()               
             elif command == "upload":
                 self.uploadFile()
+                  
             elif command == "exit":
                 self.disconnect(0)
             else:
@@ -83,23 +86,7 @@ class Client(object):
 
                 self.recieve()
 
-
-    def sendCount(self):
-
-        # Currently, this function serves no purpose except to be a possible
-        # placeholder for future changes.
-
-        try:
-            print()
-            self.sock.send(self.threads.encode())
-            print(self.recieve())
-        except Exception as e:
-            print("Ran into an issue")
-            print(e)
-            self.disconnect(3)
-
     def sendFiles(self):
-
         # Asks the client to select a file to send. Currently, only implemented
         # to send a single file. This may or may not be the place to parallelize.
         # It depends on how we tackle the threading.
@@ -111,7 +98,7 @@ class Client(object):
         window.withdraw()
 
         # Create a select file window to get the path to a file with.
-        filename = filedialog.askopenfilename(initialdir = getcwd(),
+        filenames = filedialog.askopenfilenames(initialdir = getcwd(),
                                               title = "select file")
 
         # Destroy the tkinter window that we just created.
@@ -119,42 +106,28 @@ class Client(object):
 
         # This was for testing purposes originally. It was to ensure that the
         # file was sending entirely.
-        hashed = self.getHash(filename) # Get the has of a filename
+        hashes = []
+        for file in filenames:
+            hashes.append(self.getHash(file)) # Get the has of a filename
+        threads = []
+        for h in hashes:
+            t = threading.Thread(name = h, target = self.sendHashes, args = [h])
+            t.start()
+            t.join()
+        
+    def sendHashes(self,hashed):
+       
 
-        # Get the size of the file that we are preparing to send.
-        size = getsize(filename)
+        # Sends a new checksum command for each thread 
+        command = "checksum"
+        self.sock.sendall(command.encode())
+        self.sock.send(hashed.encode())
 
-        # Opens our file and prepares to send it.
-        with open(filename, "rb") as file:
+        # Notify the user that the file was sent succesfully. May implement
+        # the name of the file to the output so we can see which file was
+        # sent when.
 
-            # Print to the client the file name of the file that we are sending
-            # to the server to be checjed.
-            print("Sending file: \"{}\"".format(basename(filename)))
-
-            # Send the size of the file to the server.
-            self.sock.send(str(size).encode())
-
-            # Sleep the program in order to give the server time to recieve the
-            # size data.
-            sleep(2)
-
-            # Send the file name to the server. At the moment, this doesn't
-            # serve a purpose, but once we implement the threading on the user
-            # side, it'll allow us to see which file the server is returning
-            # results for.
-            self.sock.send(basename(filename).encode())
-
-            # Sleep again in order to give the server time to recieve the file
-            # data.
-            sleep(6)
-
-            # Sending the file into the connection buffer.
-            self.sock.sendfile(file)
-
-            # Notify the user that the file was sent succesfully. May implement
-            # the name of the file to the output so we can see which file was
-            # sent when.
-            print("File sent")
+        print("File sent\n")
 
         # This print is for comparison purposes to ensure that the file sent to
         # the server arrived in tact. Since the server will return the hash of
@@ -180,66 +153,6 @@ class Client(object):
         return hashed
 
 
-    def uploadFile(self):
-
-        # Similar to sendFiles(), this function is meant to ask the user which
-        # file they want to send to the server. Primarily, this function
-        # is used to differentiate from sendFiles() for purpose. It does
-        # basically the same thing, but expects a different output/response
-        # from the server. This is not to be parallelized at the moment, but
-        # could be. However, that would include threading on the server, which
-        # we may not have to do at the moment. Should we want to thread this
-        # function, we'll have to be sure to Lock the current implementation
-        # of our "database," which is a dictionary. This is to ensure data
-        # integrity.
-
-        # Creates the tkinter root window.
-        window = Tk()
-
-        # Withdraws the root window so the user does not see it.
-        window.withdraw()
-
-        # Creates a file selection dialog box to select which file to upload.
-        filename = filedialog.askopenfilename(initialdir = getcwd(),
-                                              title = "select file")
-
-        # Destroys the tkinter window object once finished.
-        window.destroy()
-
-        # Gets the size of the file.
-        size = getsize(filename)
-
-        # Opens the file object.
-        with open(filename, "rb") as file:
-
-            # Print to the user which file is about to be sent.
-            print("Uploading file: \"{}\"".format(basename(filename)))
-
-            # Sends the size of the file to the server.
-            self.sock.send(str(size).encode())
-
-            # Sleep to ensure the server is ready for the next set of data.
-            sleep(2)
-
-            # Sends the name of the file to the server so that it can associate
-            # the file name with the appropriate hash.
-            self.sock.send(basename(filename).encode())
-
-            # Sleep again to ensure the server has time to prepare for the next
-            # set of data.
-            sleep(6)
-
-            # Send the file to the server.
-            self.sock.sendfile(file)
-
-            # Notify the client that the file was sent succesfully.
-            print("File sent")
-
-        # Recieve the response from the server. Should be along the lines of
-        # "Upload complete!"
-        self.recieve(1024)
-
-
     def recieve(self, size = 512):
 
         # This functions only purpose is to help assist in printing recieved
@@ -248,7 +161,7 @@ class Client(object):
         # The default buffer block size to recieve is 512, but can be passed
         # in when the function is called.
 
-        print(self.sock.recv(size).decode())
+        print(self.sock.recv(size).decode() + '\n')
 
     def disconnect(self, code):
 
