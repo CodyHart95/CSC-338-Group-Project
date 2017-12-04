@@ -6,18 +6,14 @@ from hashlib import sha256
 from tkinter import Tk, filedialog
 import sys
 import threading
-import multiprocessing as mp
-"""
-TODO: Fix formating errors in response output
 
-"""
+
 
 class Client(object):
 
     # The client counterpart to the checksum. Includes the interactions for
     # the client and the server.
-    numCPU = mp.cpu_count()
-    def __init__(self, host, port, threads = 0):
+    def __init__(self, host, port):
 
         # Currently, the client is initialized with a host to connect to
         # and a port. It also has "threads" which is in anticipation of the
@@ -30,7 +26,6 @@ class Client(object):
 
         # Set up a TCP socket.
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.threads = threads
         print("Connecting...")
 
         # This is a makeshift timeout. This can be done normally using the
@@ -42,7 +37,7 @@ class Client(object):
         while True:
             try:
                 self.sock.connect((self.host, self.port))
-                self.recieve()
+                self.receive()
                 break
             except:
                 if timeout > 20:
@@ -77,19 +72,15 @@ class Client(object):
             if command == "help":
                 self.recieve()
             elif command == "checksum":
-                self.sendFiles()               
-            elif command == "upload":
-                self.uploadFile()
-                  
+                self.sendFiles()                     
             elif command == "exit":
                 self.disconnect(0)
             else:
 
                 # If any other command is sent, be ready to recieve from the
                 # server
-
-                self.recieve()
-
+                self.receive
+    responses = []
     def sendFiles(self):
         # Asks the client to select a file to send. Currently, only implemented
         # to send a single file. This may or may not be the place to parallelize.
@@ -108,17 +99,21 @@ class Client(object):
         # Destroy the tkinter window that we just created.
         window.destroy()
 
-        # This was for testing purposes originally. It was to ensure that the
-        # file was sending entirely.
+        # Hash the files
         hashes = []
-        threads = []
         for file in filenames:
             hashes.append(self.getHash(file)) # Get the hash of a filename
+
+        #send the number of files over to the server so it knows how many threads to create
         self.sock.send(str(len(hashes)).encode())
+
+        #This section handles the thread creation that will send the hashes to the server
+        
+        threads = []
         for h in hashes:
             t = threading.Thread(name = h, target = self.sendHashes, args = [h])
             t.start()
-            threads.append(t) 
+            threads.append(t)
         for th in threads:
             th.join()
     def sendHashes(self,hashed):
@@ -132,22 +127,14 @@ class Client(object):
         # Notify the user that the file was sent succesfully. May implement
         # the name of the file to the output so we can see which file was
         # sent when.
-
-        print("File sent\n")
-
-        # This print is for comparison purposes to ensure that the file sent to
-        # the server arrived in tact. Since the server will return the hash of
-        # the binary sent to it, we should have a checksum to check against.
-        # It should be removed once we ensure that it works in most cases up to
-        # a certain data limit (I have yet to test anything over 400KB).
-        print(hashed + '\n')
+        print("File Sent!\n")
 
         # Recieve the response from the server. For this function, it should be
         # whether the file was found in the database or not.
-        for i in range(4):
-            self.recieve()
-
-
+        # Also adds them to our responses list so that they can be printed once
+        # we have them all.
+        #self.responses.append(self.sock.recv(199).decode())
+        self.receive(199)
     def getHash(self, filename):
 
         # This function is simply just getting the SHA256 hash of the file at
@@ -159,18 +146,14 @@ class Client(object):
 
         return hashed
 
-
-    def recieve(self, size = 188):
+    def receive(self, size = 512):
 
         # This functions only purpose is to help assist in printing recieved
         # data to the client screen. It's more a helper function to prevent
         # having to write self.sock.recv(<buffer>).
         # The default buffer block size to recieve is 512, but can be passed
         # in when the function is called.
-
         print(self.sock.recv(size).decode())
-        print('\n')
-        
     def disconnect(self, code):
 
         # This function is supposed to disconnect the client from the server

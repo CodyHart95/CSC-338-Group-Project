@@ -15,7 +15,7 @@ class Server(object):
     # It'll be able to not only upload to an onsite database, but also check if
     # a user's file is found within this onsite database. At the moment, there is
     # not direct database implementation at the moment.
-
+    responses = []
     def __init__(self, host, port):
 
         # The server is initialized with host (default localhost) and port
@@ -89,29 +89,27 @@ class Server(object):
         # notification saying that the command is not recognized and ask the
         # client to send "help" in order to see our list of commands.
         while True:
-            # This must have a recieve size of 8 otherwise the server begins to grab
-            # the hash of the next file
-            command = client.recv(8).decode()
-            numFiles = int(client.recv(2).decode())
-            print(command)
-            if command == "upload":
-
-                # If the client sends "upload," begin the saveFile function.
-                # This does not literally save the file on the server side, but
-                # rather it saves the checksum of the file in the "database."
-                self.saveFile(client)
-            elif command == "checksum":
-
-                # If the client sends "checksum," we will check the file they
-                # send against the server's "database" and return the results
-                # and checksum to the user.
+            command = client.recv(256).decode()
+            
+            
+            # If the client sends "checksum," we will check the file they
+            # send against the server's "database" and return the results
+            # and checksum to the user.
+            if command == "checksum":
+                numFiles = int(client.recv(10).decode())
+            #creates threads that match our incoming threads
+            #this allows the server to check if each hash matches while the next checksum is sending
                 threads = []
                 for i in range(numFiles):
                    t = threading.Thread(name = "File #" + str(i), target = self.checkSum, args = [client])
                    t.start()
                    threads.append(t)
+            
                 for th in threads:
                     th.join()
+                for r in self.responses:
+                    client.sendall(r.encode())
+                    sleep(.05)
             elif command == "exit":
 
                 # If the client sends "exit," the server will remove the client
@@ -169,19 +167,26 @@ help (or \"h\") - show a list of commands
         # Checks if the hash is in our database and returns the appropriate
         # information to the client along with the checksum so that the client
         # can check if the file was sent succesfully.
+    
         if sha256Hash in self.collection:
-            client.sendall("Your file was found in our database!\nOther names"
-                           " for this file are: {}.\nYour checksum is {}."
+           ''' client.sendall("Your file was found in our database!\nOther names"
+                           " for this file are: {}.\nYour checksum is {}.\n\n"
                            .format(", ".join(self.collection[sha256Hash]),
-                           sha256Hash).encode())
+                           sha256Hash).encode())'''
+           self.responses.append("Your file was found in our database!\nOther names"
+                           " for this file are: {}.\nYour checksum is {}.\n\n"
+                           .format(", ".join(self.collection[sha256Hash]),
+                           sha256Hash))
         else:
-            client.sendall("Your file was not found in our database! :( Please"
+            '''client.sendall("Your file was not found in our database! :( Please"
                             " upload this file so that others can check against"
-                            " it!\nYour checksum is {}.".format(sha256Hash)
-                            .encode())
-
-        sleep(2)
-
+                            " it!\nYour checksum is {}.\n\n".format(sha256Hash)
+                            .encode())'''
+            self.responses.append("Your file was not found in our database! :( Please"
+                            " upload this file so that others can check against"
+                            " it!\nYour checksum is {}.\n\n".format(sha256Hash))
+        #sleep(3)
+    
 
     def removeClient(self, client, address):
 
